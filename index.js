@@ -13,6 +13,7 @@ const { Socket } = require('net');
 const { readFileSync } = require('fs');
 
 const BIN_PATH = path.join(__dirname, 'bin');
+const TOR_DIRECTORY_PATH = path.join(BIN_PATH, 'Tor');
 const LD_LIBRARY_PATH = path.join(
   BIN_PATH, 'tor-browser_en-US', 'Browser', 'TorBrowser', 'Tor'
 );
@@ -31,8 +32,8 @@ module.exports = function(options, torrcOptions) {
   let [torrc, datadir] = module.exports.torrc(torrcOptions);
 
   let exe = path.basename(module.exports.tor(platform()));
-  let tor = path.join(BIN_PATH, 'Tor', exe);
-  let env = { LD_LIBRARY_PATH: path.join(BIN_PATH, 'Tor') };
+  let tor = path.join(TOR_DIRECTORY_PATH, exe);
+  let env = { LD_LIBRARY_PATH: TOR_DIRECTORY_PATH };
 
   if (process.env.GRANAX_USE_SYSTEM_TOR && process.platform === 'linux') {
     tor = exe;
@@ -86,6 +87,11 @@ module.exports = function(options, torrcOptions) {
 };
 
 /**
+ * @type {string}
+ */
+module.exports.TOR_DIRECTORY_PATH = TOR_DIRECTORY_PATH;
+
+/**
  * Returns the local path to the tor bundle
  * @returns {string}
  */
@@ -125,6 +131,30 @@ module.exports.tor = function(platform) {
   }
 
   return torpath;
+};
+
+/**
+ * Returns the local path to the Geo IP file
+ * @param {('IPv4'|'IPv6')} [protocol='IPv4'] - IP protocol version
+ * @returns {string}
+ */
+module.exports.getGeoIpPath = function(platform, protocol = 'IPv4') {
+  const filename = `geoip${protocol === 'IPv6' ? '6' : ''}`;
+
+  switch (platform) {
+    case 'win32':
+      return path.join(BIN_PATH, 'Browser', 'TorBrowser', 'Data', 'Tor',
+        filename);
+    case 'darwin':
+      return path.join(BIN_PATH, '.tbb.app', 'Contents', 'Resources',
+        'TorBrowser', 'Tor', filename);
+    case 'android':
+    case 'linux':
+      return path.join(BIN_PATH, 'tor-browser_en-US', 'Browser', 'TorBrowser',
+        'Data', 'Tor', filename);
+    default:
+      throw new Error(`Unsupported platform "${platform}"`);
+  }
 };
 
 /**

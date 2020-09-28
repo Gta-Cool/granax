@@ -4,7 +4,7 @@ const { expect } = require('chai');
 const proxyquire = require('proxyquire');
 const sinon = require('sinon');
 const { EventEmitter } = require('events');
-const { TorController } = require('..');
+const { TorController, getGeoIpPath } = require('..');
 
 
 describe('@module granax', function() {
@@ -101,6 +101,27 @@ describe('@module granax', function() {
     });
 
     it('should throw if unsupported platform', function() {
+
+    });
+
+  });
+
+  describe('@function getGeoIpPath', function() {
+
+    ['IPv4', 'IPv6'].forEach((protocol) => {
+
+      ['win32', 'darwin', 'linux', 'android'].forEach((platform) => {
+        it(`should return the ${platform} ${protocol} path`, function() {
+          expect(getGeoIpPath(platform, protocol))
+            .to.be.a('string').that.is.not.empty;
+        });
+      });
+
+      it('should throw if unsupported platform', function() {
+        expect(function() {
+          getGeoIpPath('colossus');
+        }).to.throw(Error, 'Unsupported platform "colossus"');
+      });
 
     });
 

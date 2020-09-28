@@ -8,12 +8,15 @@ const _7z = require('7zip')['7z'];
 const path = require('path');
 const childProcess = require('child_process');
 const os = require('os');
-const { tor: getTorPath } = require('..');
+const {
+  TOR_DIRECTORY_PATH,
+  tor: getTorPath,
+  getGeoIpPath
+} = require('..');
 const getLatestTorBrowserVersion = require('latest-torbrowser-version');
 const BIN_DIR = path.join(__dirname, '../bin');
 const rimraf = require('rimraf');
 const mv = require('mv');
-const granax = require('../index');
 const ProgressBar = require('progress');
 const { Transform } = require('stream');
 
@@ -185,6 +188,65 @@ exports._unpackLinux = function(bundle, callback) {
 };
 
 /**
+ * Move the tor files (binary, libs, geoip) to a given directory
+ * @param {string} dest 
+ * @param {function} callback 
+ */
+exports.moveTorFiles = function (dest, callback) {
+  const source = path.dirname(getTorPath(os.platform()));
+
+  mv(source, dest, (err) => {
+    if (err) {
+      return callback(err);
+    }
+
+    if (process.env.GRANAX_REMOVE_GEOIP === '1') {
+      // If geoip files are not moved, they'll be removed on clean
+      return callback();
+    }
+
+    const srcGeoIPv4 = getGeoIpPath(os.platform());
+    mv(srcGeoIPv4, path.join(dest, path.basename(srcGeoIPv4)), (err) => {
+      if (err) {
+        return callback(err);
+      }
+
+      const srcGeoIPv6 = getGeoIpPath(os.platform(), 'IPv6');
+      mv(srcGeoIPv6, path.join(dest, path.basename(srcGeoIPv6)), (err) => {
+        if (err) {
+          return callback(err);
+        }
+
+        return callback();
+      });
+    });
+  });
+};
+
+/**
+ * Clean the package based on platform.
+ * @param {string} bundle 
+ */
+exports.clean = function (bundle) {
+  rimraf.sync(getTorPath(os.platform()));
+  rimraf.sync(bundle);
+
+  switch (os.platform()) {
+    case 'win32':
+      rimraf.sync(path.join(BIN_DIR, 'Browser'));
+      break;
+    case 'darwin':
+      rimraf.sync(path.join(BIN_DIR, '.tbb.app'));
+      break;
+    case 'android':
+    case 'linux':
+      rimraf.sync(path.join(BIN_DIR, 'tor-browser_en-US'));
+      break;
+    default:
+  }
+};
+
+/**
  * Detects the platform and installs TBB
  * @param {function} callback
  */
@@ -239,35 +301,17 @@ exports.install = function(callback) {
             return callback(null, bin);
           }
 
-          const source = path.dirname(granax.tor(os.platform()));
-          const dest = path.join(BIN_DIR, 'Tor');
-
-          console.log(`Moving tor binary and libs to ${dest}...`);
-          mv(source, dest, (err) => {
+          console.log(`Moving tor binary and libs to ${TOR_DIRECTORY_PATH}...`);
+          exports.moveTorFiles(TOR_DIRECTORY_PATH, (err) => {
             if (err) {
               return callback(err);
             }
 
             console.log('Cleaning up...');
-            rimraf.sync(granax.tor(os.platform()));
-            rimraf.sync(basename);
+            exports.clean(basename);
 
-            switch (os.platform()) {
-              case 'win32':
-                rimraf.sync(path.join(BIN_DIR, 'Browser'));
-                break;
-              case 'darwin':
-                rimraf.sync(path.join(BIN_DIR, '.tbb.app'));
-                break;
-              case 'android':
-              case 'linux':
-                rimraf.sync(path.join(BIN_DIR, 'tor-browser_en-US'));
-                break;
-              default:
-            }
-
-            callback(null, path.join(BIN_DIR, 'Tor', path.basename(
-              granax.tor(os.platform())
+            callback(null, path.join(TOR_DIRECTORY_PATH, path.basename(
+              getTorPath(os.platform())
             )));
           });
         });

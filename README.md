@@ -21,6 +21,10 @@ package manager by setting `GRANAX_USE_SYSTEM_TOR=1`.
 You can also tell Granax to install the latest alpha release of Tor instead of 
 the latest stable release, with `GRANAX_USE_TOR_ALPHA=1`.
 
+Tor requires Geo IP files for by-country configurations (e.g.`EntryNodes {us}`).
+These files weight ~8mb, if you don't need them, you may choose to remove them by
+setting `GRANAX_REMOVE_GEOIP=1`.
+
 ```js
 const tor = require('@deadcanaries/granax')();
 
