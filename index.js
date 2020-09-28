@@ -134,12 +134,21 @@ module.exports.tor = function(platform) {
 };
 
 /**
+ * Returns the Geo IP filename
+ * @param {('IPv4'|'IPv6')} [protocol='IPv4'] - IP protocol version
+ * @returns {string}
+ */
+module.exports.getGeoIpFilename = function(protocol = 'IPv4') {
+  return `geoip${protocol === 'IPv6' ? '6' : ''}`;
+};
+
+/**
  * Returns the local path to the Geo IP file
  * @param {('IPv4'|'IPv6')} [protocol='IPv4'] - IP protocol version
  * @returns {string}
  */
 module.exports.getGeoIpPath = function(platform, protocol = 'IPv4') {
-  const filename = `geoip${protocol === 'IPv6' ? '6' : ''}`;
+  const filename = module.exports.getGeoIpFilename(protocol);
 
   switch (platform) {
     case 'win32':
